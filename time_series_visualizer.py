@@ -1,0 +1,104 @@
+# I am not familiar with seaborn plot.
+# Therefore, I would like to say thank you for fuzzyray's github which help me a lot for using seaborn plot commands
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+import numpy as np
+from pandas.plotting import register_matplotlib_converters
+
+register_matplotlib_converters()
+
+# Import data (Make sure to parse dates. Consider setting index column to 'date'.)
+df = pd.read_csv('fcc-forum-pageviews.csv',
+                 parse_dates=['date'],
+                 index_col=['date'])
+
+# Clean data
+df = df.loc[(df['value'] >= df['value'].quantile(0.025))
+            & (df['value'] <= df['value'].quantile(0.975))]
+
+
+def draw_line_plot():
+  # Draw line plot
+  fig, ax = plt.subplots()
+  ax.plot(df.index, df.value, 'r', linewidth=1)
+  ax.set_title("Daily freeCodeCamp Forum Page Views 5/2016-12/2019")
+  ax.set_xlabel("Date")
+  ax.set_ylabel("Page Views")
+
+  # Save image and return fig (don't change this part)
+  fig.savefig('line_plot.png')
+  return fig
+
+
+def draw_bar_plot():
+  # Copy and modify data for monthly bar plot
+  df_bar = df.copy()  # Protect from mutating
+  df_bar['Years'] = df_bar.index.year
+  df_bar['Months'] = df_bar.index.month_name()
+  df_bar = pd.DataFrame(
+    df_bar.groupby(['Years', 'Months'],
+                   sort=False)["value"].mean())
+  df_bar = df_bar.rename(columns={'value': 'Average Page Views'})
+  df_bar = df_bar.reset_index()
+  # Fill in the missing data points
+  miss_year = np.ones(4, int) * 2016
+  miss_months = ['January', 'February', 'March', 'April']
+  miss_avg_view = np.zeros(4, int)  # Set as zero
+  missing_data = {
+    'Years': miss_year,
+    'Months': miss_months,
+    'Average Page Views': miss_avg_view
+  }
+  # Filling
+  df_bar = pd.concat([pd.DataFrame(missing_data), df_bar])
+
+  # Draw bar plot
+  fig, ax = plt.subplots()
+  ax.set_title('Daily freeCodeCamp Forum Average Page Views per Month')
+
+  bar_plot = sns.barplot(data=df_bar,
+                      x='Years',
+                      y='Average Page Views',
+                      hue='Months',
+                      palette='tab10')
+  # To get the similar color as example
+  bar_plot.set_xticklabels(bar_plot.get_xticklabels(),
+                        rotation=90,
+                        horizontalalignment='center')
+
+  # Save image and return fig (don't change this part)
+  fig.savefig('bar_plot.png')
+  return fig
+
+
+def draw_box_plot():
+  # Prepare data for box plots (this part is done!)
+  df_box = df.copy()
+  df_box.reset_index(inplace=True)
+  # Get year and month from data
+  df_box['year'] = [d.year for d in df_box.date]
+  df_box['month'] = [d.strftime('%b') for d in df_box.date]
+
+  # Draw box plots (using Seaborn)
+  fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+
+  # Yearly boxplot [In Left]
+  sns.boxplot(data=df_box, x='year', y='value', ax=axes[0])
+  axes[0].set_title('Year-wise Box Plot (Trend)')
+  axes[0].set_xlabel('Year')
+  axes[0].set_ylabel('Page Views')
+
+  # Monthly boxplot [In Right]
+  months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    'Nov', 'Dec'
+  ]
+  sns.boxplot(data=df_box, x='month', y='value', order=months, ax=axes[1])
+  axes[1].set_title('Month-wise Box Plot (Seasonality)')
+  axes[1].set_xlabel('Month')
+  axes[1].set_ylabel('Page Views')
+
+  # Save image and return fig (don't change this part)
+  fig.savefig('box_plot.png')
+  return fig
